@@ -2,7 +2,11 @@ package net.lamgc.digital_plate;
 
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.os.Handler;
 import android.os.Message;
@@ -28,67 +32,52 @@ public class MainActivity extends AppCompatActivity {
     private TextView tv_DTStats;
     //异步处理
     private Handler sendHd;
+
+    //蓝牙
+    //蓝牙适配器对象
     private BluetoothAdapter bluetoothAp;
+    //蓝牙广播收听者对象
+    private BroadcastReceiver mBluetoothReceiver;
+
     //退出计时
     private long mExitTime;
-
-    //测试用变量
-    private long aLong;
 
     /**
      * Activity创建事件
      *
      * @param savedInstanceState 参数
      */
-    @SuppressLint("HandlerLeak")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         //向上传递事件
         super.onCreate(savedInstanceState);
         //创建布局
         setContentView(R.layout.activity_main);
-        //异步处理数据
-        sendHd = new Handler(){
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void handleMessage(Message msg) {
-                if(msg.what == 0){
-                    //触摸数据处理
-                    MotionEvent event = (MotionEvent) msg.obj;
-                    aLong++;
-                    if(event.getAction() == MotionEvent.ACTION_DOWN){
-                        tv_DTStats.setText("Down");
-                    }else if(event.getAction() == MotionEvent.ACTION_UP){
-                        tv_DTStats .setText("Up");
-                    }else if(event.getAction() == MotionEvent.ACTION_MOVE){
-                        tv_DTStats .setText("Move");
-                    }else{
-                        tv_DTStats .setText("Null");
-                    }
-                    tv_X.setText(Float.toString(event.getRawX()) + " [X]");
-                    tv_Y.setText(Float.toString(event.getRawY()) + " [Y]");
-                    System.out.println("[" + Long.toString(aLong) + "] Stats:[" + tv_DTStats.getText().toString() + "] RawXY:[" + Float.toString(event.getRawX()) + " " + Float.toString(event.getRawY()) + "] XY:[" + Float.toString(event.getX()) + " " + Float.toString(event.getY()) + "]");
-                    if(msg.arg1 == 1){
-                        包装数据(event);
-                    }
-                }else if(msg.what == 1){
-                    //蓝牙连接操作
-                    //防止空指针(虽然不太可能，但还是做个防备)
-                    if(bluetoothAp == null){
-                        System.out.println("[错误] 蓝牙适配器对象为Null");
-                        return;
-                    }
 
-                    if(!bluetoothAp.isEnabled()){
-                        System.out.println("蓝牙为关闭状态，请求打开蓝牙...");
-                        Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                        startActivityForResult(enabler, 25542);
-                    }
-                }
-            }
-        };
+        //设置代码
+        setCode();
+
         //获取蓝牙适配器对象
         bluetoothAp = BluetoothAdapter.getDefaultAdapter();
+        //创建事件集
+        IntentFilter filter = new IntentFilter();
+        //发现设备
+        filter.addAction(BluetoothDevice.ACTION_FOUND);
+        //设备连接状态被改变
+        filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        //蓝牙设备状态被改变
+        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        //搜索状态被改变
+        filter.addAction(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED);
+        //设备搜索开始
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+        //设备搜索结束
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        //设备名称被改变
+        filter.addAction(BluetoothAdapter.ACTION_LOCAL_NAME_CHANGED);
+        //注册广播收听者
+        registerReceiver(mBluetoothReceiver, filter);
+
         //创建消息对象
         Message bltmsg = new Message();
         bltmsg.what = 1;
@@ -108,6 +97,67 @@ public class MainActivity extends AppCompatActivity {
                         "] Density:[" + Float.toString(metric.density) +
                         "] Dpi:[" + Integer.toString(metric.densityDpi) + "]"
         );
+    }
+
+    @SuppressLint("HandlerLeak")
+    private void setCode(){
+        //异步处理数据
+        sendHd = new Handler(){
+            @SuppressLint("SetTextI18n")
+            @Override
+            public void handleMessage(Message msg) {
+                if(msg.what == 0){
+                    //触摸数据处理
+                    MotionEvent event = (MotionEvent) msg.obj;
+                    if(event.getAction() == MotionEvent.ACTION_DOWN){
+                        tv_DTStats.setText("Down");
+                    }else if(event.getAction() == MotionEvent.ACTION_UP){
+                        tv_DTStats .setText("Up");
+                    }else if(event.getAction() == MotionEvent.ACTION_MOVE){
+                        tv_DTStats .setText("Move");
+                    }else{
+                        tv_DTStats .setText("Null");
+                    }
+                    tv_X.setText(Float.toString(event.getRawX()) + " [X]");
+                    tv_Y.setText(Float.toString(event.getRawY()) + " [Y]");
+                    System.out.println("Stats:[" + tv_DTStats.getText().toString() + "] RawXY:[" + Float.toString(event.getRawX()) + " " + Float.toString(event.getRawY()) + "] XY:[" + Float.toString(event.getX()) + " " + Float.toString(event.getY()) + "]");
+                    if(msg.arg1 == 1){
+                        包装数据(event);
+                    }
+                }else if(msg.what == 1){
+                    //蓝牙连接操作
+                    //防止空指针(虽然不太可能，但还是做个防备)
+                    if(bluetoothAp == null){
+                        System.out.println("[错误] 蓝牙适配器对象为Null");
+                        return;
+                    }
+
+                    if(!bluetoothAp.isEnabled()){
+                        System.out.println("蓝牙为关闭状态，请求打开蓝牙...");
+                        Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                        startActivityForResult(enabler, 25542);
+                    }
+                }
+            }
+        };
+        //蓝牙事件广播收听者代码
+        mBluetoothReceiver = new BroadcastReceiver(){
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                //每扫描到一个设备，系统都会发送此广播。
+                if(BluetoothDevice.ACTION_FOUND.equals(action)){
+                    //获取蓝牙设备
+                    BluetoothDevice scanDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    if(scanDevice == null || scanDevice.getName() == null){ return;}
+                    //蓝牙设备名称
+                    System.out.println("发现蓝牙设备! 设备名:[" + scanDevice.getName() + "] 设备地址:[" + scanDevice.getAddress() + "]");
+                }else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)){
+                    System.out.println("蓝牙扫描已结束");
+                }
+            }
+
+        };
     }
 
     /**
@@ -163,8 +213,6 @@ public class MainActivity extends AppCompatActivity {
         e.printStackTrace();
     }
     }
-
-
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
