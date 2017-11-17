@@ -79,6 +79,11 @@ public class MainActivity extends AppCompatActivity {
         };
         //获取蓝牙适配器对象
         bluetoothAp = BluetoothAdapter.getDefaultAdapter();
+        //创建消息对象
+        Message bltmsg = new Message();
+        bltmsg.what = 1;
+        //进行蓝牙连接操作(异步,不影响后面处理)
+        sendHd.handleMessage(bltmsg);
         //获取组件对象
         tv_X = findViewById(R.id.TextView_X);
         tv_Y = findViewById(R.id.TextView_Y);
@@ -131,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
         msg.what = 0;
         msg.obj = event;
         //投递消息
-        sendHd.dispatchMessage(msg);
+        sendHd.handleMessage(msg);
         //消费事件
         return true;
     }
