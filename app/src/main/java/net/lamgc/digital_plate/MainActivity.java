@@ -57,27 +57,6 @@ public class MainActivity extends AppCompatActivity {
         //设置代码
         setCode();
 
-        //获取蓝牙适配器对象
-        bluetoothAp = BluetoothAdapter.getDefaultAdapter();
-        //创建事件集
-        IntentFilter filter = new IntentFilter();
-        //发现设备
-        filter.addAction(BluetoothDevice.ACTION_FOUND);
-        //设备连接状态被改变
-        filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
-        //蓝牙设备状态被改变
-        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
-        //搜索状态被改变
-        filter.addAction(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED);
-        //设备搜索开始
-        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-        //设备搜索结束
-        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-        //设备名称被改变
-        filter.addAction(BluetoothAdapter.ACTION_LOCAL_NAME_CHANGED);
-        //注册广播收听者
-        registerReceiver(mBluetoothReceiver, filter);
-
         //创建消息对象
         Message bltmsg = new Message();
         bltmsg.what = 1;
@@ -97,6 +76,13 @@ public class MainActivity extends AppCompatActivity {
                         "] Density:[" + Float.toString(metric.density) +
                         "] Dpi:[" + Integer.toString(metric.densityDpi) + "]"
         );
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        //注销广播收听者
+        unregisterReceiver(mBluetoothReceiver);
     }
 
     @SuppressLint("HandlerLeak")
@@ -126,8 +112,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }else if(msg.what == 1){
                     //蓝牙连接操作
-                    //防止空指针(虽然不太可能，但还是做个防备)
                     if(bluetoothAp == null){
+                        //防止空指针(虽然不太可能，但还是做个防备)
                         System.out.println("[错误] 蓝牙适配器对象为Null");
                         return;
                     }
@@ -140,21 +126,56 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         };
+
+        //获取蓝牙适配器对象
+        bluetoothAp = BluetoothAdapter.getDefaultAdapter();
+        //创建事件集
+        IntentFilter filter = new IntentFilter();
+        //发现设备 - 已使用
+        filter.addAction(BluetoothDevice.ACTION_FOUND);
+        //蓝牙设备状态被改变
+        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        //搜索状态被改变
+        filter.addAction(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED);
+        //设备搜索开始 - 已使用
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+        //设备搜索结束 - 已使用
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        //设备名称被改变 - 已使用
+        filter.addAction(BluetoothAdapter.ACTION_LOCAL_NAME_CHANGED);
+        //连接状态被改变
+        filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
+        //注册广播收听者
+        registerReceiver(mBluetoothReceiver, filter);
+
         //蓝牙事件广播收听者代码
         mBluetoothReceiver = new BroadcastReceiver(){
             @Override
             public void onReceive(Context context, Intent intent) {
+                //获取状态
                 String action = intent.getAction();
-                //每扫描到一个设备，系统都会发送此广播。
-                if(BluetoothDevice.ACTION_FOUND.equals(action)){
+
+                if(BluetoothDevice.ACTION_FOUND.equals(action)) {
+                    //发现设备
                     //获取蓝牙设备
                     BluetoothDevice scanDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    if(scanDevice == null || scanDevice.getName() == null){ return;}
+                    if (scanDevice == null || scanDevice.getName() == null) {
+                        System.out.println("获取到无效蓝牙设备对象，忽略处理");
+                        return;
+                    }
                     //蓝牙设备名称
                     System.out.println("发现蓝牙设备! 设备名:[" + scanDevice.getName() + "] 设备地址:[" + scanDevice.getAddress() + "]");
-                }else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)){
+                }else if(BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)){
+                    //蓝牙搜索开始
+                    System.out.println("蓝牙扫描已开始");
+                }else if(BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)){
+                    //蓝牙搜索结束
                     System.out.println("蓝牙扫描已结束");
+                }else if(BluetoothAdapter.ACTION_LOCAL_NAME_CHANGED.equals(action)){
+                    //蓝牙设备名被更改
+                    System.out.println("蓝牙设备名已更改 新名称:[" + bluetoothAp.getName() + "]");
                 }
+
             }
 
         };
@@ -195,6 +216,8 @@ public class MainActivity extends AppCompatActivity {
                     startActivity(discoverableIntent);
                 }*/
                 setDiscoverableTimeout(120);
+                bluetoothAp.startDiscovery();
+                System.out.println("蓝牙设备搜索已启动");
                 Toast.makeText(MainActivity.this, "蓝牙已可见，请在电脑连接本设备", Toast.LENGTH_LONG).show();
             }
         }
