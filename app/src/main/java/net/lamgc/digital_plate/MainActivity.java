@@ -14,6 +14,7 @@ import android.view.MotionEvent;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
 public class MainActivity extends AppCompatActivity {
@@ -136,10 +137,34 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println("蓝牙打开请求被拒绝");
                 Toast.makeText(MainActivity.this, "必须打开蓝牙并连接到电脑才能使用!", Toast.LENGTH_LONG).show();
             }else if(resultCode == -1){
-                System.out.println("蓝牙打开请求已通过");
+                System.out.println("蓝牙打开请求已通过 设备名:[" + bluetoothAp.getName() + "] 地址:[" + bluetoothAp.getAddress() + "]");
+                /*
+                if (bluetoothAp.getScanMode() != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
+                    Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+                    discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
+                    startActivity(discoverableIntent);
+                }*/
+                setDiscoverableTimeout(120);
+                Toast.makeText(MainActivity.this, "蓝牙已可见，请在电脑连接本设备", Toast.LENGTH_LONG).show();
             }
         }
     }
+
+    public void setDiscoverableTimeout(int timeout) {
+        BluetoothAdapter adapter=BluetoothAdapter.getDefaultAdapter();
+    try {
+        Method setDiscoverableTimeout = BluetoothAdapter.class.getMethod("setDiscoverableTimeout", int.class);
+        setDiscoverableTimeout.setAccessible(true);
+        Method setScanMode =BluetoothAdapter.class.getMethod("setScanMode", int.class,int.class);
+        setScanMode.setAccessible(true);
+        setDiscoverableTimeout.invoke(adapter, timeout);
+        setScanMode.invoke(adapter, BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE,timeout);
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    }
+
+
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -151,6 +176,9 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
+    /**
+     * 两按程序关闭
+     */
     public void exit() {
         if ((System.currentTimeMillis() - mExitTime) > 2000) {
             Toast.makeText(MainActivity.this, "再按一次退出程序", Toast.LENGTH_SHORT).show();
