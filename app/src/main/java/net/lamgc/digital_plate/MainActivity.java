@@ -9,8 +9,10 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.nio.ByteBuffer;
 
@@ -26,7 +28,10 @@ public class MainActivity extends AppCompatActivity {
     //异步处理
     private Handler sendHd;
     private BluetoothAdapter bluetoothAp;
+    //退出计时
+    private long mExitTime;
 
+    //测试用变量
     private long aLong;
 
     /**
@@ -62,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
                     tv_X.setText(Float.toString(event.getRawX()) + " [X]");
                     tv_Y.setText(Float.toString(event.getRawY()) + " [Y]");
                     System.out.println("[" + Long.toString(aLong) + "] Stats:[" + tv_DTStats.getText().toString() + "] RawXY:[" + Float.toString(event.getRawX()) + " " + Float.toString(event.getRawY()) + "] XY:[" + Float.toString(event.getX()) + " " + Float.toString(event.getY()) + "]");
+                    if(msg.arg1 == 1){
+                        包装数据(event);
+                    }
                 }else if(msg.what == 1){
                     //蓝牙连接操作
                     //防止空指针(虽然不太可能，但还是做个防备)
@@ -71,8 +79,9 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     if(!bluetoothAp.isEnabled()){
+                        System.out.println("蓝牙为关闭状态，请求打开蓝牙...");
                         Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                        startActivityForResult(enabler, 2);
+                        startActivityForResult(enabler, 25542);
                     }
                 }
             }
@@ -119,14 +128,44 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-
+        System.out.println("requestCode:[" + Integer.toString(requestCode) + "] resultCode:[" + Integer.toString(resultCode) + "]");
+        if(requestCode == 25542){
+            //确定是蓝牙请求
+            if(resultCode == 0){
+                //如果被拒绝打开蓝牙，丢出提示
+                System.out.println("蓝牙打开请求被拒绝");
+                Toast.makeText(MainActivity.this, "必须打开蓝牙并连接到电脑才能使用!", Toast.LENGTH_LONG).show();
+            }else if(resultCode == -1){
+                System.out.println("蓝牙打开请求已通过");
+            }
+        }
     }
 
-        /**
-         * 由于仅仅是记录和传输触摸坐标，所以记录后向下传递即可
-         * @param event 参数
-         * @return 是否消费事件,true不消费,false消费
-         */
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+            exit();
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    public void exit() {
+        if ((System.currentTimeMillis() - mExitTime) > 2000) {
+            Toast.makeText(MainActivity.this, "再按一次退出程序", Toast.LENGTH_SHORT).show();
+            mExitTime = System.currentTimeMillis();
+        } else {
+            finish();
+            System.exit(0);
+        }
+    }
+
+     /**
+     * 由于仅仅是记录和传输触摸坐标，所以记录后向下传递即可
+     * @param event 参数
+     * @return 是否消费事件,true不消费,false消费
+     */
     @SuppressLint("SetTextI18n")
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
