@@ -20,7 +20,12 @@ import android.view.MotionEvent;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
 public class MainActivity extends AppCompatActivity {
@@ -44,6 +49,13 @@ public class MainActivity extends AppCompatActivity {
     //退出计时
     private long mExitTime;
 
+    //先用wifi测试一下
+    private Socket socket;
+    private OutputStream os;
+
+
+
+
     /**
      * Activity创建事件
      *
@@ -61,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
 
         //创建消息对象
         Message bltmsg = new Message();
-        bltmsg.what = 1;
+        bltmsg.what = 2;
         //进行蓝牙连接操作(异步,不影响后面处理)
         sendHd.handleMessage(bltmsg);
         //获取组件对象
@@ -146,7 +158,16 @@ public class MainActivity extends AppCompatActivity {
                     tv_Y.setText(Float.toString(event.getRawY()) + " [Y]");
                     System.out.println("Stats:[" + tv_DTStats.getText().toString() + "] RawXY:[" + Float.toString(event.getRawX()) + " " + Float.toString(event.getRawY()) + "] XY:[" + Float.toString(event.getX()) + " " + Float.toString(event.getY()) + "]");
                     if(msg.arg1 == 1){
-                        Motion2byte(event);
+                        if(socket != null && !socket.isOutputShutdown()){
+                            try {
+                                os.write(Motion2byte(event));
+                                os.flush();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }else{
+                            System.out.println("Socket未连接，拒绝发送");
+                        }
                     }
                 }else if(msg.what == 1){
                     //蓝牙连接操作
@@ -161,6 +182,22 @@ public class MainActivity extends AppCompatActivity {
                         Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                         startActivityForResult(enabler, 25542);
                     }
+                }else if(msg.what == 2){
+                    new Thread(){
+                        public void run(){
+                            System.out.println("正在连接电脑端...");
+                            try {
+                                socket = new Socket();
+                                socket.connect(new InetSocketAddress("192.168.1.104", 25565));
+                                System.out.println("已连接电脑端,置OutputStream对象");
+                                os = socket.getOutputStream();
+                                System.out.println("连接完成");
+                            } catch (IOException e) {
+                                System.out.println("Socket连接出现错误:");
+                                e.printStackTrace();
+                            }
+                        }
+                    }.start();
                 }
             }
         };
@@ -194,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
 
                 if(BluetoothDevice.ACTION_FOUND.equals(action)) {
                     //发现设备
-                    //获取蓝牙设备
+                    //获取蓝牙设备对象
                     BluetoothDevice scanDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     if (scanDevice == null || scanDevice.getName() == null) {
                         System.out.println("获取到无效蓝牙设备对象，忽略处理");
@@ -218,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
         };
 
         //注册蓝牙广播收听者
-        registerReceiver(mBluetoothReceiver, filter);
+        //registerReceiver(mBluetoothReceiver, filter);
     }
 
     /**
@@ -311,6 +348,7 @@ public class MainActivity extends AppCompatActivity {
         Message msg = new Message();
         //设置消息类型，及设置类对象
         msg.what = 0;
+        msg.arg1 = 1;
         msg.obj = event;
         //投递消息
         sendHd.handleMessage(msg);
@@ -325,6 +363,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private byte[] Motion2byte(MotionEvent event){
         //状态[byte][1] + X坐标[float][4] + Y坐标[float][4] + 结束标识[byte][3]
+        //有效数据长度9 无效数据长度3 总长度12
         //状态 1/Down 2/Move 3/Up 0/Null
         //结束标识 {-1 -1 -1}
         ByteBuffer date = ByteBuffer.allocate(1 + 4 + 4 + 3);
@@ -345,5 +384,15 @@ public class MainActivity extends AppCompatActivity {
         date.put(new byte[]{-1, -1, -1});
 
         return date.array();
+    }
+
+    /**
+     * 生成尺寸数据
+     * @param dm
+     * @return
+     */
+    private byte[] Display2byte(DisplayMetrics dm){
+
+        return null;
     }
 }
