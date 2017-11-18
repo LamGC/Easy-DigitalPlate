@@ -68,14 +68,23 @@ public class MainActivity extends AppCompatActivity {
         tv_CNStats = findViewById(R.id.TextView_CNstats);
         tv_DTStats = findViewById(R.id.TextView_DTstats);
         //获取屏幕尺寸
-        DisplayMetrics metric = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(metric);
+        DisplayMetrics metric = getDisplayMetrics();
         System.out.println(
-                "WidthPix:[" + Integer.toString(metric.widthPixels) +
+                          "WidthPix:[" + Integer.toString(metric.widthPixels) +
                         "] HeightPix:[" + Integer.toString(metric.heightPixels) +
                         "] Density:[" + Float.toString(metric.density) +
                         "] Dpi:[" + Integer.toString(metric.densityDpi) + "]"
         );
+    }
+
+    /**
+     * 获取屏幕尺寸对象
+     * @return 返回尺寸对象
+     */
+    private DisplayMetrics getDisplayMetrics(){
+        DisplayMetrics metric = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metric);
+        return metric;
     }
 
     @Override
@@ -85,6 +94,10 @@ public class MainActivity extends AppCompatActivity {
         unregisterReceiver(mBluetoothReceiver);
     }
 
+    /**
+     * 设置代码块
+     * 特别乱- -
+     */
     @SuppressLint("HandlerLeak")
     private void setCode(){
         //异步处理数据
@@ -108,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
                     tv_Y.setText(Float.toString(event.getRawY()) + " [Y]");
                     System.out.println("Stats:[" + tv_DTStats.getText().toString() + "] RawXY:[" + Float.toString(event.getRawX()) + " " + Float.toString(event.getRawY()) + "] XY:[" + Float.toString(event.getX()) + " " + Float.toString(event.getY()) + "]");
                     if(msg.arg1 == 1){
-                        包装数据(event);
+                        Motion2byte(event);
                     }
                 }else if(msg.what == 1){
                     //蓝牙连接操作
@@ -198,6 +211,7 @@ public class MainActivity extends AppCompatActivity {
      * @param resultCode 返回值
      * @param data 数据
      */
+    @SuppressLint("HardwareIds")
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         System.out.println("requestCode:[" + Integer.toString(requestCode) + "] resultCode:[" + Integer.toString(resultCode) + "]");
@@ -215,7 +229,9 @@ public class MainActivity extends AppCompatActivity {
                     discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
                     startActivity(discoverableIntent);
                 }*/
-                setDiscoverableTimeout(120);
+                //设置蓝牙可见(120s)
+                setDiscoverableTimeout();
+                //开始搜索蓝牙设备
                 bluetoothAp.startDiscovery();
                 System.out.println("蓝牙设备搜索已启动");
                 Toast.makeText(MainActivity.this, "蓝牙已可见，请在电脑连接本设备", Toast.LENGTH_LONG).show();
@@ -223,18 +239,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void setDiscoverableTimeout(int timeout) {
-        BluetoothAdapter adapter=BluetoothAdapter.getDefaultAdapter();
-    try {
-        Method setDiscoverableTimeout = BluetoothAdapter.class.getMethod("setDiscoverableTimeout", int.class);
-        setDiscoverableTimeout.setAccessible(true);
-        Method setScanMode =BluetoothAdapter.class.getMethod("setScanMode", int.class,int.class);
-        setScanMode.setAccessible(true);
-        setDiscoverableTimeout.invoke(adapter, timeout);
-        setScanMode.invoke(adapter, BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE,timeout);
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
+    public void setDiscoverableTimeout() {
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        try {
+            Method setDiscoverableTimeout = BluetoothAdapter.class.getMethod("setDiscoverableTimeout", int.class);
+            setDiscoverableTimeout.setAccessible(true);
+            Method setScanMode = BluetoothAdapter.class.getMethod("setScanMode", int.class,int.class);
+            setScanMode.setAccessible(true);
+            setDiscoverableTimeout.invoke(adapter, 120);
+            setScanMode.invoke(adapter, BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE, 120);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -284,7 +300,7 @@ public class MainActivity extends AppCompatActivity {
      * @param event 事件参数
      * @return 字节
      */
-    private byte[] 包装数据(MotionEvent event){
+    private byte[] Motion2byte(MotionEvent event){
         //状态[byte][1] + X坐标[float][4] + Y坐标[float][4] + 结束标识[byte][3]
         //状态 1/Down 2/Move 3/Up 0/Null
         //结束标识 {-1 -1 -1}
