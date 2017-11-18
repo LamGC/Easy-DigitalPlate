@@ -183,8 +183,7 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction(BluetoothAdapter.ACTION_LOCAL_NAME_CHANGED);
         //连接状态被改变
         filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
-        //注册广播收听者
-        registerReceiver(mBluetoothReceiver, filter);
+        //注册在下面
 
         //蓝牙事件广播收听者代码
         mBluetoothReceiver = new BroadcastReceiver(){
@@ -217,6 +216,9 @@ public class MainActivity extends AppCompatActivity {
             }
 
         };
+
+        //注册蓝牙广播收听者
+        registerReceiver(mBluetoothReceiver, filter);
     }
 
     /**
@@ -264,6 +266,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * 120s蓝牙可见
+     */
     public void setDiscoverableTimeout() {
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         try {
@@ -282,23 +287,16 @@ public class MainActivity extends AppCompatActivity {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
 
         if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
-            exit();
+            if ((System.currentTimeMillis() - mExitTime) > 2000) {
+                Toast.makeText(MainActivity.this, "再按一次退出程序", Toast.LENGTH_SHORT).show();
+                mExitTime = System.currentTimeMillis();
+            } else {
+                finish();
+                System.exit(0);
+            }
             return true;
         }
         return super.onKeyDown(keyCode, event);
-    }
-
-    /**
-     * 两按程序关闭
-     */
-    public void exit() {
-        if ((System.currentTimeMillis() - mExitTime) > 2000) {
-            Toast.makeText(MainActivity.this, "再按一次退出程序", Toast.LENGTH_SHORT).show();
-            mExitTime = System.currentTimeMillis();
-        } else {
-            finish();
-            System.exit(0);
-        }
     }
 
      /**
@@ -317,7 +315,7 @@ public class MainActivity extends AppCompatActivity {
         //投递消息
         sendHd.handleMessage(msg);
         //消费事件
-        return true;
+        return super.dispatchTouchEvent(event);
     }
 
     /**
