@@ -392,7 +392,12 @@ public class MainActivity extends AppCompatActivity {
      * @return
      */
     private byte[] Display2byte(DisplayMetrics dm){
-
-        return null;
+        ByteBuffer date = ByteBuffer.allocate(13);
+        //数据标识(4)[int][1] + 宽[int][4] + 高[int][4] + 屏幕dpi[int][4]
+        date.put((byte)4);
+        date.putInt(dm.widthPixels);
+        date.putInt(dm.heightPixels);
+        date.putInt(dm.densityDpi);
+        return date.array();
     }
 }
