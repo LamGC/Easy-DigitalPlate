@@ -14,6 +14,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -85,6 +87,29 @@ public class MainActivity extends AppCompatActivity {
         DisplayMetrics metric = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metric);
         return metric;
+    }
+
+    /**
+     * 创建菜单事件
+     * @param menu 菜单对象
+     * @return ...
+     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        //载入菜单布局
+        getMenuInflater().inflate(R.menu.menu01, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    /**
+     * 菜单项被点击
+     * @param item 被操作菜单
+     * @return 是否消费事件
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        return true;
     }
 
     @Override
