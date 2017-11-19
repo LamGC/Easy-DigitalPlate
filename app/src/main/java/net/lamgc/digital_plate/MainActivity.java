@@ -158,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
                     tv_Y.setText(Float.toString(event.getRawY()) + " [Y]");
                     System.out.println("Stats:[" + tv_DTStats.getText().toString() + "] RawXY:[" + Float.toString(event.getRawX()) + " " + Float.toString(event.getRawY()) + "] XY:[" + Float.toString(event.getX()) + " " + Float.toString(event.getY()) + "]");
                     if(msg.arg1 == 1){
-                        if(socket != null && !socket.isOutputShutdown()){
+                        if(socket != null && !socket.isOutputShutdown() && os != null){
                             try {
                                 os.write(Motion2byte(event));
                                 os.flush();
